@@ -29,7 +29,8 @@ rows_failed	        | Lista de falhas       |
 @version 	12.1.17
 /*/
 User Function LTPostProd(cProduto, cDescricao, cUnidade)
-	Local oLeanTrack  := FWRest():New("https://demo.leantrack.com.br")
+	Local cUrl        := SuperGetMv("LT_URL", .F., "https://demo.leantrack.com.br")
+	Local oLeanTrack  := FWRest():New(cUrl)
 	Local cAuthToken  := U_LTGetToken()
 	Local aHeader     := {}
 	Local cJSON       := ""

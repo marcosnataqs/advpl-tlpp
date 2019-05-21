@@ -11,5 +11,13 @@ A650GeraC2 (Gera Op para Produto/Quantidade Informados nos parâmetros).
 @version 	12.1.17
 /*/
 User Function MTA650I
-    MsgInfo("MTA650I")
+    Local cProduto := SC2->C2_PRODUTO
+    Local cOP      := SC2->C2_NUM + SC2->C2_ITEM + SC2->C2_SEQUEN
+    Local nQtd     := SC2->C2_QUANT
+    Local dDtIni   := SC2->C2_DATPRI
+    Local dDtFim   := SC2->C2_DATPRF
+    Local dDtEmis  := SC2->C2_EMISSAO
+
+    U_LTPostOrder(cProduto, cOP, nQtd, dDtIni, dDtFim, dDtEmis)
+
 Return

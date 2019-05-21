@@ -11,5 +11,13 @@ na função A650Altera(rotina de alteração do cadastramento de Ordens de Produção)
 @version 	12.1.17
 /*/
 User Function MTA650A
-    MsgInfo("MTA650A")
+    Local cProduto := SC2->C2_PRODUTO
+    Local cOP      := SC2->C2_NUM + SC2->C2_ITEM + SC2->C2_SEQUEN
+    Local nQtd     := SC2->C2_QUANT
+    Local dDtIni   := SC2->C2_DATPRI
+    Local dDtFim   := SC2->C2_DATPRF
+    Local dDtEmis  := SC2->C2_EMISSAO
+
+    U_LTPostOrder(cProduto, cOP, nQtd, dDtIni, dDtFim, dDtEmis)
+
 Return
