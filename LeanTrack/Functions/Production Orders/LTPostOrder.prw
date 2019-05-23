@@ -37,7 +37,6 @@ User Function LTPostOrder(cProduto, cOP, nQtd, dDtIni, dDtFim, dDtEmis)
 	Local cAuthToken  := U_LTGetToken()
 	Local aHeader     := {}
 	Local cJSON       := ""
-    Local oJsonResult := JsonObject():new()
 
     Default cProduto := ""
     Default cOP      := ""
@@ -56,21 +55,17 @@ User Function LTPostOrder(cProduto, cOP, nQtd, dDtIni, dDtFim, dDtEmis)
     cJSON += '"dt_inicio": "'+ DTOC(dDtIni) +' 00:00:00",'
     cJSON += '"dt_fim": "'+ DTOC(dDtFim) +' 00:00:00",'
     cJSON += '"dt_emissao": "'+ DTOC(dDtEmis) +' 00:00:00",'
-    cJSON += '"equipamento": ""'
+    cJSON += '"equipamento": null'
     cJSON += '}]'
 
 	oLeanTrack:setPath("/api/integration/production-orders")
 	oLeanTrack:SetPostParams(cJSON)
 
 	If oLeanTrack:Post(aHeader)
-        oJsonResult:fromJSON( oLeanTrack:GetResult() )
-        MsgInfo( oJsonResult:GetJsonText("rows_failed_count") )
-
-		ConOut("LEANTRACK /api/integration/production-orders -> Ordem "+ cOP +" atualizada com sucesso!")
+		ConOut("LEANTRACK /api/integration/production-orders -> Ordem "+ cOP +" atualizada com sucesso! -> " + AllTrim(oLeanTrack:cResult))
 	Else
         MsgInfo( oLeanTrack:GetLastError() )
 		ConOut("LEANTRACK /api/integration/production-orders -> Ordem "+ cOP +" erro na atualização! -> " + AllTrim(oLeanTrack:cResult))
 	EndIf
 
-    FreeObj(oJsonResult)
 Return

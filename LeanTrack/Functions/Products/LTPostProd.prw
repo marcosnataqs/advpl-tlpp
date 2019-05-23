@@ -48,7 +48,7 @@ User Function LTPostProd(cProduto, cDescricao, cUnidade)
 	oLeanTrack:SetPostParams(cJSON)
 
 	If oLeanTrack:Post(aHeader)
-		ConOut("LEANTRACK /api/integration/products -> Produto" + cProduto + " atualizado com sucesso!")
+		ConOut("LEANTRACK /api/integration/products -> Produto" + cProduto + " atualizado com sucesso! -> " + AllTrim(oLeanTrack:cResult))
 	Else
 		ConOut("LEANTRACK /api/integration/products -> Produto" + cProduto + " erro na atualização! -> " + AllTrim(oLeanTrack:cResult))
 	EndIf
