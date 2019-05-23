@@ -37,6 +37,7 @@ User Function LTPostOrder(cProduto, cOP, nQtd, dDtIni, dDtFim, dDtEmis)
 	Local cAuthToken  := U_LTGetToken()
 	Local aHeader     := {}
 	Local cJSON       := ""
+    Local oJsonResult := JsonObject():new()
 
     Default cProduto := ""
     Default cOP      := ""
@@ -62,11 +63,14 @@ User Function LTPostOrder(cProduto, cOP, nQtd, dDtIni, dDtFim, dDtEmis)
 	oLeanTrack:SetPostParams(cJSON)
 
 	If oLeanTrack:Post(aHeader)
-        MsgInfo( oLeanTrack:GetResult() )
+        oJsonResult:fromJSON( oLeanTrack:GetResult() )
+        MsgInfo( oJsonResult:GetJsonText("rows_failed_count") )
+
 		ConOut("LEANTRACK /api/integration/production-orders -> Ordem "+ cOP +" atualizada com sucesso!")
 	Else
         MsgInfo( oLeanTrack:GetLastError() )
 		ConOut("LEANTRACK /api/integration/production-orders -> Ordem "+ cOP +" erro na atualização! -> " + AllTrim(oLeanTrack:cResult))
 	EndIf
 
+    FreeObj(oJsonResult)
 Return
