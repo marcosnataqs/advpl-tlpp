@@ -45,9 +45,9 @@ User Function ITEM
                 cTipo      := AllTrim( oModel:GetModel("SB1MASTER"):GetValue("B1_TIPO") )
 
                 If nOpc == MODEL_OPERATION_INSERT .Or. nOpc == MODEL_OPERATION_UPDATE
-                    // If cTipo $ cProdTipos
+                    If cTipo $ cProdTipos
                         U_LTPostProd(cProduto, cDescricao, cUnidade)
-                    // EndIf
+                    EndIf
                 EndIf
 
             EndIf

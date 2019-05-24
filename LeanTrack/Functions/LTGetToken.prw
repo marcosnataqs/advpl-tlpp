@@ -12,6 +12,9 @@ Chave de Acesso da API gerada no Leantrack 4.0 (Menu -> Integrações -> API)
 User Function LTGetToken
     Local cAuthToken  := ""
 
+    //------------------------------------------------//
+    //-- Alterar TOKEN conforme gerado no Leantrack --//
+    //------------------------------------------------//
     cAuthToken += "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjQ1YzBiMGQ2ZjY4MjhlO"
     cAuthToken += "TNlOTc2YTMyOTViMWNkZmMzYzJjZjJkYzk2Y2MwYjNkOGI0NzYzNDhjYmYyYjNlND"
     cAuthToken += "MifQ.eyJpc3MiOiJodHRwczpcL1wvZGVtby5sZWFudHJhY2suY29tLmJyIiwiYXVk"

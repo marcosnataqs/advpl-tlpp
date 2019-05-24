@@ -64,7 +64,6 @@ User Function LTPostOrder(cProduto, cOP, nQtd, dDtIni, dDtFim, dDtEmis)
 	If oLeanTrack:Post(aHeader)
 		ConOut("LEANTRACK /api/integration/production-orders -> Ordem "+ cOP +" atualizada com sucesso! -> " + AllTrim(oLeanTrack:cResult))
 	Else
-        MsgInfo( oLeanTrack:GetLastError() )
 		ConOut("LEANTRACK /api/integration/production-orders -> Ordem "+ cOP +" erro na atualização! -> " + AllTrim(oLeanTrack:cResult))
 	EndIf
 
