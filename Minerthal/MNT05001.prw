@@ -57,6 +57,12 @@ Static Function ModelDef()
 	// Funcao que executa o gatilho de preenchimento da descricao dos campos
 	oStrSZA:AddTrigger("ZA_COD","ZA_GRUPO",{ || .T. },{|| oModel := FwModelActive(),;
 	AllTrim(Posicione("SB1",1,xFilial("SB1")+oModel:GetValue("M_SZA", "ZA_COD"), "B1_GRUPO"))})
+
+	oStrSZA:AddTrigger("ZA_COD","ZA_DESC",{ || .T. },{|| oModel := FwModelActive(),;
+	AllTrim(Posicione("SB1",1,xFilial("SB1")+oModel:GetValue("M_SZA", "ZA_COD"), "B1_DESC"))})
+	
+	// Validacoes para campos
+	oStrSZA:SetProperty("ZA_COD", MODEL_FIELD_VALID, {|| ValProd(oModel)})
 		
 	// Adiciona ao modelo um componente de formulario
 	oModel:AddFields("M_SZA",/*cOwner*/,oStrSZA)
@@ -123,3 +129,45 @@ Static Function MenuDef()
     ADD OPTION aRotina Title "Excluir" 		ACTION "VIEWDEF.MNT05001" OPERATION MODEL_OPERATION_DELETE	ACCESS 0
 
 Return aRotina
+
+/*/{Protheus.doc} ValProd
+Valida cadastro duplicado de produto na campanha
+@type Static Function
+@author Marcos Natã Santos
+@since 12/10/2019
+@version version
+@param oModel, object, Modelo M_SZA
+@return lRet, logic
+/*/
+Static Function ValProd(oModel)
+	Local lRet := .T.
+	Local cCodProd := oModel:GetValue("M_SZA", "ZA_COD")
+	Local cQry := ""
+	Local nQtdReg := 0
+
+	cQry := "SELECT ZA_COD " + CRLF
+    cQry += "FROM " + RetSqlName("SZA") + CRLF
+    cQry += "WHERE D_E_L_E_T_ <> '*' " + CRLF
+    cQry += "AND ZA_FILIAL = '"+ xFilial("SZA") +"' " + CRLF
+    cQry += "AND ZA_COD = '"+ AllTrim(cCodProd) +"' " + CRLF
+    cQry := ChangeQuery(cQry)
+
+    If Select("VALPROD") > 0
+        VALPROD->(DbCloseArea())
+    EndIf
+
+    TcQuery cQry New Alias "VALPROD"
+
+    VALPROD->(dbGoTop())
+    COUNT TO nQtdReg
+	VALPROD->(dbGoTop())
+	
+	If nQtdReg > 0
+		Help(Nil,Nil,"ValProd",Nil,"Já existe este produto cadastrado na campanha.",1,0,;
+			Nil,Nil,Nil,Nil,Nil,{"Por favor realize os ajustes no produto já cadastrado."})
+		lRet := .F.
+	EndIf
+
+	VALPROD->(DbCloseArea())
+
+Return lRet
