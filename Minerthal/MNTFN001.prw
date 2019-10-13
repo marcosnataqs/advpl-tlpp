@@ -18,8 +18,8 @@ User Function MNTFN001()
     Local nQtdGanha := 0
     Local lExecFun := ExecFunc()
     Local lReclAlt := SuperGetMv("XX_RECLALT", .F., .F.)
-    Local cTES := SuperGetMv("XX_TESCAMP", .F., "510")
-    Local cCF := SuperGetMv("XX_CFCAMP", .F., "6101")
+    Local cTES := ""
+    Local cCF := ""
 
     Local nDELET := Len(aHeader)+1
     Local nC6ITEM := aScan(aHeader,{|x| AllTrim(x[2]) == "C6_ITEM"})
@@ -32,36 +32,13 @@ User Function MNTFN001()
     Local nC6XCAMPAN := aScan(aHeader,{|x| AllTrim(x[2]) == "C6_XCAMPAN"})
 
     If lExecFun
-        If INCLUI
-            //-- calcula campanha e adiciona bonificação --//
-            For nX := 1 To Len(aCols)
-                If !aCols[nX][nDELET]
-                    nQtdGanha := QtdGanha(aCols[nX][nC6PRODUTO], aCols[nX][nC6QTDVEN])
+        //-- Busca o tipo de saída para bonificação --//
+        cTES := TipoSaida(M->C5_CLIENTE, M->C5_LOJACLI)
+        cCF := AllTrim(Posicione("SF4", 1, xFilial("SF4") + cTES, "F4_CF"))
 
-                    If nQtdGanha > 0
-                        ACopy(aCols[nX], aColsAux)
-                        aColsAux[nC6ITEM] := PadL(Len(aCols)+1, 2, "0")
-                        aColsAux[nC6QTDVEN] := nQtdGanha
-                        aColsAux[nC6VALOR] := aColsAux[nC6QTDVEN] * aColsAux[nC6PRCVEN]
-                        aColsAux[nC6TES] := cTES
-                        aColsAux[nC6CF] := cCF
-                        aColsAux[nC6XCAMPAN] := "S"
-
-                        AAdd(aCols, aColsAux)
-                        aColsAux := Array(Len(aHeader)+1)
-                    EndIf
-                EndIf
-            Next nX
-        ElseIf ALTERA
-            If lReclAlt
-                //-- Deleta itens gerado pela campanha anteriormente --//
-                For nX := 1 To Len(aCols)
-                    If aCols[nX][nC6XCAMPAN] == "S"
-                        aCols[nX][nDELET] := .T.
-                    EndIf
-                Next nX
-
-                //-- Recalcula campanha e adiciona bonificação --//
+        If !Empty(cTES) .And. !Empty(cCF)
+            If INCLUI
+                //-- calcula campanha e adiciona bonificação --//
                 For nX := 1 To Len(aCols)
                     If !aCols[nX][nDELET]
                         nQtdGanha := QtdGanha(aCols[nX][nC6PRODUTO], aCols[nX][nC6QTDVEN])
@@ -80,9 +57,38 @@ User Function MNTFN001()
                         EndIf
                     EndIf
                 Next nX
+            ElseIf ALTERA
+                If lReclAlt
+                    //-- Deleta itens gerado pela campanha anteriormente --//
+                    For nX := 1 To Len(aCols)
+                        If aCols[nX][nC6XCAMPAN] == "S"
+                            aCols[nX][nDELET] := .T.
+                        EndIf
+                    Next nX
 
-                //-- Ajusta numeração dos itens do pedido --//
-                AjstItens()
+                    //-- Recalcula campanha e adiciona bonificação --//
+                    For nX := 1 To Len(aCols)
+                        If !aCols[nX][nDELET]
+                            nQtdGanha := QtdGanha(aCols[nX][nC6PRODUTO], aCols[nX][nC6QTDVEN])
+
+                            If nQtdGanha > 0
+                                ACopy(aCols[nX], aColsAux)
+                                aColsAux[nC6ITEM] := PadL(Len(aCols)+1, 2, "0")
+                                aColsAux[nC6QTDVEN] := nQtdGanha
+                                aColsAux[nC6VALOR] := aColsAux[nC6QTDVEN] * aColsAux[nC6PRCVEN]
+                                aColsAux[nC6TES] := cTES
+                                aColsAux[nC6CF] := cCF
+                                aColsAux[nC6XCAMPAN] := "S"
+
+                                AAdd(aCols, aColsAux)
+                                aColsAux := Array(Len(aHeader)+1)
+                            EndIf
+                        EndIf
+                    Next nX
+
+                    //-- Ajusta numeração dos itens do pedido --//
+                    AjstItens()
+                EndIf
             EndIf
         EndIf
     EndIf
@@ -199,3 +205,26 @@ Static Function ExecFunc()
     EndIf
 
 Return lRet
+
+/*/{Protheus.doc} TipoSaida
+Busca tipo de saída para pedido de venda
+@type Static Function
+@author Marcos Natã Santos
+@since 13/10/2019
+@version 1.0
+@param cCodCli, char
+@param cLojaCli, char
+@return cTES, char
+/*/
+Static Function TipoSaida(cCodCli, cLojaCli)
+    Local cTES := "510"
+    Local cTESInt := SuperGetMv("XX_TESINT", .F., "510")
+    Local cTESExt := SuperGetMv("XX_TESEXT", .F., "510")
+    Local cUF := Posicione("SA1", 1, xFilial("SA1") + cCodCli + cLojaCli, "A1_EST")
+
+    If cUF == SM0->M0_ESTENT
+        cTES := cTESInt
+    Else
+        cTES := cTESExt
+    EndIf
+Return cTES
