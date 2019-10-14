@@ -85,9 +85,6 @@ User Function MNTFN001()
                             EndIf
                         EndIf
                     Next nX
-
-                    //-- Ajusta numeração dos itens do pedido --//
-                    AjstItens()
                 EndIf
             EndIf
         EndIf
@@ -143,28 +140,6 @@ Static Function QtdGanha(cCodProd, nQtdVen)
     CAMP->(DbCloseArea())
 
 Return nQtdResult
-
-/*/{Protheus.doc} AjstItens
-Ajusta numeracao dos itens no pedido de venda
-@type Static Function
-@author Marcos Natã Santos
-@since 12/10/2019
-@version 1.0
-/*/
-Static Function AjstItens()
-    Local nX := 0
-    Local nItem := 1
-
-    Local nDELET := Len(aHeader)+1
-    Local nC6ITEM := aScan(aHeader,{|x| AllTrim(x[2]) == "C6_ITEM"})
-
-    For nX := 1 To Len(aCols)
-        If !aCols[nX][nDELET]
-            aCols[nX][nC6ITEM] := PadL(nItem, 2, "0")
-            nItem++
-        EndIf
-    Next nX
-Return
 
 /*/{Protheus.doc} ExecFunc
 Avalia se deve executar a campanha de bonificação
