@@ -217,9 +217,9 @@ Busca tipo de saída para pedido de venda
 @return cTES, char
 /*/
 Static Function TipoSaida(cCodCli, cLojaCli)
-    Local cTES := "510"
-    Local cTESInt := SuperGetMv("XX_TESINT", .F., "510")
-    Local cTESExt := SuperGetMv("XX_TESEXT", .F., "510")
+    Local cTES := "583"
+    Local cTESInt := SuperGetMv("XX_TESINT", .F., "583")
+    Local cTESExt := SuperGetMv("XX_TESEXT", .F., "584")
     Local cUF := Posicione("SA1", 1, xFilial("SA1") + cCodCli + cLojaCli, "A1_EST")
 
     If cUF == SM0->M0_ESTENT
