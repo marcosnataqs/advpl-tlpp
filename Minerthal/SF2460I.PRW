@@ -1,4 +1,7 @@
 #INCLUDE "PROTHEUS.CH"
+#INCLUDE "TOPCONN.CH"
+
+#DEFINE CRLF Chr(13) + Chr(10)
 
 /*/{Protheus.doc} Sf2460i
 
@@ -61,7 +64,8 @@ User Function Sf2460i
 				//		_nPesoEmbal+=szu->(int(sd2->d2_quant/zu_miqtemb)*zu_mipeso)
 
 			endif
-			If SD2->D2_GRUPO $ GetMV('MV_MIGRUFR') .AND. !(SD2->D2_TES $('583/584'))
+			If SD2->D2_GRUPO $ GetMV('MV_MIGRUFR');
+				.And. !EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
 				_nQtdFrete += SD2->D2_QUANT
 				_nTotItem  := _nTotItem + 1
 				_cPedido   := SD2->D2_PEDIDO
@@ -345,7 +349,8 @@ User Function Sf2460i
 		_nSD2FIcm := 0.00
 		Do While !EoF() .and. (D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA)==_cKeyD2
 			
-			If SD2->D2_GRUPO $ GetMV('MV_MIGRUFR') .AND. !(SD2->D2_TES $('583/584'))
+			If SD2->D2_GRUPO $ GetMV('MV_MIGRUFR');
+				.And. !EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
 				
 				_nPercFrete := (SD2->D2_QUANT / _nQtdFrete)
 				_nVlFrete   :=  SF2->F2_FRETE * _nPercFrete
@@ -362,10 +367,6 @@ User Function Sf2460i
 				_nVlFrete       := 0
 				_lGrupo         := .F.
 				SD2->D2_VALFRE  := 0
-
-				If SD2->D2_TES $('583/584')
-
-				EndIf
 			EndIf
 
 			dbSelectArea("SF4")
@@ -680,29 +681,86 @@ Static Function FreteBon()
 	Local nPercFrt := 0
 	Local nVlFrt := 0
 	
+	//-- Verifica quantidade para calculo do frete --//
 	SD2->(dbSetOrder(3))
 	SD2->(dbGoTop())
 	If SD2->( dbSeek(cSD2Key) )
 		While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
-			nQtdTot += SD2->D2_QUANT //-- Calcula quantidade total vendida --//
-			SD2->(dbSkip())
-		EndDo
-	EndIf
-
-	SD2->(dbSetOrder(3))
-	SD2->(dbGoTop())
-	If SD2->( dbSeek(cSD2Key) )
-		While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
-			If SD2->D2_TES $ "583/584"
-				nPercFrt := (SD2->D2_QUANT / nQtdTot)
-				nVlFrt := SF2->F2_FRETE * nPercFrt
-				
-				SF2->F2_VALFAT += nVlFrt //-- Adiciona valor de frete do item bonificado --//
+			If !EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
+				nQtdTot += SD2->D2_QUANT
 			EndIf
 			SD2->(dbSkip())
 		EndDo
 	EndIf
+
+	//-- Zera valor faturado para recalcular --//
+	RecLock("SF2", .F.)
+		SF2->F2_VALFAT := 0
+		SF2->F2_VALIMP5 := 0
+		SF2->F2_VALIMP6 := 0
+	SF2->( MsUnlock() )
+
+	//-- Recalcula impostos e valor faturado da nota fiscal --//
+	SD2->(dbSetOrder(3))
+	SD2->(dbGoTop())
+	If SD2->( dbSeek(cSD2Key) )
+		While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
+			If !EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
+				nPercFrt := (SD2->D2_QUANT / nQtdTot)
+				nVlFrt := SF2->F2_FRETE * nPercFrt
+
+				RecLock("SD2", .F.)
+					SD2->D2_VALBRUT := SD2->D2_TOTAL + nVlFrt
+					SD2->D2_BASIMP5 := SD2->D2_TOTAL + nVlFrt
+					SD2->D2_BASIMP6 := SD2->D2_TOTAL + nVlFrt
+				SD2->( MsUnlock() )
+
+				RecLock("SD2", .F.)
+					SD2->D2_VALIMP5 := SD2->D2_BASIMP5 * (SD2->D2_ALQIMP5 / 100)
+					SD2->D2_VALIMP6 := SD2->D2_BASIMP6 * (SD2->D2_ALQIMP6 / 100)
+				SD2->( MsUnlock() )
+				
+				RecLock("SF2", .F.)
+					SF2->F2_VALFAT += SD2->D2_VALBRUT
+					SF2->F2_VALIMP5 += SD2->D2_VALIMP5
+					SF2->F2_VALIMP6 += SD2->D2_VALIMP6
+				SF2->( MsUnlock() )
+			EndIf
+			SD2->(dbSkip())
+		EndDo
+	EndIf
+
+	//-- Atualiza impostos no cabeçalho da nota fiscal
+	RecLock("SF2", .F.)
+	SF2->F2_BASIMP5 := SF2->F2_VALFAT
+	SF2->F2_BASIMP6 := SF2->F2_VALFAT
+	SF2->( MsUnlock() )
 	
 	RestArea(aAreaSF2)
 	RestArea(aAreaSD2)
 Return
+
+/*/{Protheus.doc} EItemCmp
+Verifica se o item do pedido foi gerado pela campanha comprou ganhou
+@type Static Function
+@author Marcos Natã Santos
+@since 16/10/2019
+@version 1.0
+@param cPedido, char
+@param cItem, char
+@param cProduto, char
+@param cTES, char
+@return lRet, logic
+/*/
+Static Function EItemCmp(cPedido, cItem, cProduto, cTES)
+	Local lRet := .F.
+	Local cCmpTES := SuperGetMv("XX_CAMPTES", .F., "583/584")
+	Local cXCAMPAN := Posicione("SC6", 1, xFilial("SC6") + cPedido + cItem + cProduto, "C6_XCAMPAN")
+	
+	If cTES $ cCmpTES
+		If cXCAMPAN == "S"
+			lRet := .T.
+		EndIf
+	EndIf
+
+Return lRet
