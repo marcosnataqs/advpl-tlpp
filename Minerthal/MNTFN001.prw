@@ -29,6 +29,8 @@ User Function MNTFN001()
     Local nC6VALOR := aScan(aHeader,{|x| AllTrim(x[2]) == "C6_VALOR"})
     Local nC6TES := aScan(aHeader,{|x| AllTrim(x[2]) == "C6_TES"})
     Local nC6CF := aScan(aHeader,{|x| AllTrim(x[2]) == "C6_CF"})
+    Local nC6QTDLIB := aScan(aHeader,{|x| AllTrim(x[2]) == "C6_QTDLIB"})
+    Local nC6COMIS1 := aScan(aHeader,{|x| AllTrim(x[2]) == "C6_COMIS1"})
     Local nC6XCAMPAN := aScan(aHeader,{|x| AllTrim(x[2]) == "C6_XCAMPAN"})
 
     If lExecFun
@@ -47,9 +49,11 @@ User Function MNTFN001()
                             ACopy(aCols[nX], aColsAux)
                             aColsAux[nC6ITEM] := PadL(Len(aCols)+1, 2, "0")
                             aColsAux[nC6QTDVEN] := nQtdGanha
+                            aColsAux[nC6QTDLIB] := IIF(aCols[nX][nC6QTDLIB] > 0, nQtdGanha, 0)
                             aColsAux[nC6VALOR] := aColsAux[nC6QTDVEN] * aColsAux[nC6PRCVEN]
                             aColsAux[nC6TES] := cTES
                             aColsAux[nC6CF] := cCF
+                            aColsAux[nC6COMIS1] := 0
                             aColsAux[nC6XCAMPAN] := "S"
 
                             AAdd(aCols, aColsAux)
@@ -70,16 +74,18 @@ User Function MNTFN001()
                     For nX := 1 To Len(aCols)
                         If !aCols[nX][nDELET]
                             nQtdGanha := QtdGanha(aCols[nX][nC6PRODUTO], aCols[nX][nC6QTDVEN])
-
+    
                             If nQtdGanha > 0
                                 ACopy(aCols[nX], aColsAux)
                                 aColsAux[nC6ITEM] := PadL(Len(aCols)+1, 2, "0")
                                 aColsAux[nC6QTDVEN] := nQtdGanha
+                                aColsAux[nC6QTDLIB] := IIF(aCols[nX][nC6QTDLIB] > 0, nQtdGanha, 0)
                                 aColsAux[nC6VALOR] := aColsAux[nC6QTDVEN] * aColsAux[nC6PRCVEN]
                                 aColsAux[nC6TES] := cTES
                                 aColsAux[nC6CF] := cCF
+                                aColsAux[nC6COMIS1] := 0
                                 aColsAux[nC6XCAMPAN] := "S"
-
+    
                                 AAdd(aCols, aColsAux)
                                 aColsAux := Array(Len(aHeader)+1)
                             EndIf
