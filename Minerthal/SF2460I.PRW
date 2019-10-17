@@ -580,10 +580,11 @@ User Function Sf2460i
 			MsUnLock()
 		Endif
 		
-		//---------------------------------------------------------------------------//
-		//-- Adiciona valor do frete ao total da nota fiscal dos itens bonificados --//
-		//---------------------------------------------------------------------------//
-		FreteBon()
+		//------------------------------------------------------//
+		//-- Campanha Comprou Ganhou                          --//
+		//-- Calcula valor de frete, impostos, valor faturado --//
+		//------------------------------------------------------//
+		CampCalc()
 		
 		If SF2->F2_VALFAT > 0
 			_vParcelas:=condicao(SF2->F2_VALFAT,SF2->F2_COND,0,ddatabase)
@@ -666,14 +667,14 @@ User Function Sf2460i
 	RestArea(aAreaLoc)
 Return
 
-/*/{Protheus.doc} FreteBon
-Adiciona valor de frete dos itens bonificados ao total da nota fiscal
+/*/{Protheus.doc} CampCalc
+Calcula valor de frete, impostos, valor faturado
 @type Static Function
 @author Marcos Natã Santos
 @since 15/10/2019
 @version 1.0
 /*/
-Static Function FreteBon()
+Static Function CampCalc()
 	Local aAreaSF2 := SF2->( GetArea() )
 	Local aAreaSD2 := SD2->( GetArea() )
 	Local cSD2Key := SF2->(F2_FILIAL+F2_DOC+F2_SERIE+F2_CLIENTE+F2_LOJA)
@@ -693,7 +694,7 @@ Static Function FreteBon()
 		EndDo
 	EndIf
 
-	//-- Zera valor faturado para recalcular --//
+	//-- Zera valor faturado e impostos para recalcular --//
 	RecLock("SF2", .F.)
 		SF2->F2_VALFAT := 0
 		SF2->F2_VALIMP5 := 0
