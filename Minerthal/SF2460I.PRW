@@ -678,64 +678,84 @@ Static Function CampCalc()
 	Local aAreaSF2 := SF2->( GetArea() )
 	Local aAreaSD2 := SD2->( GetArea() )
 	Local cSD2Key := SF2->(F2_FILIAL+F2_DOC+F2_SERIE+F2_CLIENTE+F2_LOJA)
+	Local lExecuta := .F.
 	Local nQtdTot := 0
 	Local nPercFrt := 0
 	Local nVlFrt := 0
+
+	//-- Verifica se o pedido contém itens da campanha --//
+	SD2->(dbSetOrder(3))
+	SD2->(dbGoTop())
+	If SD2->( dbSeek(cSD2Key) )
+		While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
+			If EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
+				lExecuta := .T. //-- Executa apenas se tiver itens da campanha --//
+			EndIf
+			SD2->(dbSkip())
+		EndDo
+	EndIf
 	
-	//-- Verifica quantidade para calculo do frete --//
-	SD2->(dbSetOrder(3))
-	SD2->(dbGoTop())
-	If SD2->( dbSeek(cSD2Key) )
-		While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
-			If !EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
-				nQtdTot += SD2->D2_QUANT
-			EndIf
-			SD2->(dbSkip())
-		EndDo
+	If lExecuta
+		//-- Verifica quantidade para calculo do frete --//
+		SD2->(dbSetOrder(3))
+		SD2->(dbGoTop())
+		If SD2->( dbSeek(cSD2Key) )
+			While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
+				If !EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
+					nQtdTot += SD2->D2_QUANT
+				EndIf
+				SD2->(dbSkip())
+			EndDo
+		EndIf
+
+		//-- Zera valor faturado e impostos para recalcular --//
+		RecLock("SF2", .F.)
+			SF2->F2_VALFAT := 0
+			SF2->F2_VALIMP5 := 0
+			SF2->F2_VALIMP6 := 0
+		SF2->( MsUnlock() )
+
+		//-- Recalcula impostos e valor faturado da nota fiscal --//
+		SD2->(dbSetOrder(3))
+		SD2->(dbGoTop())
+		If SD2->( dbSeek(cSD2Key) )
+			While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
+				If !EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
+					nPercFrt := (SD2->D2_QUANT / nQtdTot)
+					nVlFrt := SF2->F2_FRETE * nPercFrt
+
+					RecLock("SD2", .F.)
+						SD2->D2_VALBRUT := SD2->D2_TOTAL + nVlFrt
+						SD2->D2_BASIMP5 := SD2->D2_TOTAL + nVlFrt
+						SD2->D2_BASIMP6 := SD2->D2_TOTAL + nVlFrt
+					SD2->( MsUnlock() )
+
+					RecLock("SD2", .F.)
+						SD2->D2_VALIMP5 := SD2->D2_BASIMP5 * (SD2->D2_ALQIMP5 / 100)
+						SD2->D2_VALIMP6 := SD2->D2_BASIMP6 * (SD2->D2_ALQIMP6 / 100)
+					SD2->( MsUnlock() )
+					
+					RecLock("SF2", .F.)
+						SF2->F2_VALFAT += SD2->D2_VALBRUT
+						SF2->F2_VALIMP5 += SD2->D2_VALIMP5
+						SF2->F2_VALIMP6 += SD2->D2_VALIMP6
+					SF2->( MsUnlock() )
+				Else
+					//-- Atualiza valor bruto do item bonificação --//
+					RecLock("SD2", .F.)
+						SD2->D2_VALBRUT := SD2->D2_TOTAL
+					SD2->( MsUnlock() )
+				EndIf
+				SD2->(dbSkip())
+			EndDo
+		EndIf
+
+		//-- Atualiza impostos no cabeçalho da nota fiscal
+		RecLock("SF2", .F.)
+		SF2->F2_BASIMP5 := SF2->F2_VALFAT
+		SF2->F2_BASIMP6 := SF2->F2_VALFAT
+		SF2->( MsUnlock() )
 	EndIf
-
-	//-- Zera valor faturado e impostos para recalcular --//
-	RecLock("SF2", .F.)
-		SF2->F2_VALFAT := 0
-		SF2->F2_VALIMP5 := 0
-		SF2->F2_VALIMP6 := 0
-	SF2->( MsUnlock() )
-
-	//-- Recalcula impostos e valor faturado da nota fiscal --//
-	SD2->(dbSetOrder(3))
-	SD2->(dbGoTop())
-	If SD2->( dbSeek(cSD2Key) )
-		While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
-			If !EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
-				nPercFrt := (SD2->D2_QUANT / nQtdTot)
-				nVlFrt := SF2->F2_FRETE * nPercFrt
-
-				RecLock("SD2", .F.)
-					SD2->D2_VALBRUT := SD2->D2_TOTAL + nVlFrt
-					SD2->D2_BASIMP5 := SD2->D2_TOTAL + nVlFrt
-					SD2->D2_BASIMP6 := SD2->D2_TOTAL + nVlFrt
-				SD2->( MsUnlock() )
-
-				RecLock("SD2", .F.)
-					SD2->D2_VALIMP5 := SD2->D2_BASIMP5 * (SD2->D2_ALQIMP5 / 100)
-					SD2->D2_VALIMP6 := SD2->D2_BASIMP6 * (SD2->D2_ALQIMP6 / 100)
-				SD2->( MsUnlock() )
-				
-				RecLock("SF2", .F.)
-					SF2->F2_VALFAT += SD2->D2_VALBRUT
-					SF2->F2_VALIMP5 += SD2->D2_VALIMP5
-					SF2->F2_VALIMP6 += SD2->D2_VALIMP6
-				SF2->( MsUnlock() )
-			EndIf
-			SD2->(dbSkip())
-		EndDo
-	EndIf
-
-	//-- Atualiza impostos no cabeçalho da nota fiscal
-	RecLock("SF2", .F.)
-	SF2->F2_BASIMP5 := SF2->F2_VALFAT
-	SF2->F2_BASIMP6 := SF2->F2_VALFAT
-	SF2->( MsUnlock() )
 	
 	RestArea(aAreaSF2)
 	RestArea(aAreaSD2)
