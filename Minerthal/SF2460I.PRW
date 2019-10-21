@@ -504,35 +504,39 @@ User Function Sf2460i
 					_nSD2TOTAL := SD2->D2_TOTAL
 					//_nSD2BIcm  := SD2->D2_BASEICM
 					//_nSD2VIcm  := SD2->D2_VALICM
-					RecLock('SD2',.F.)
-					SD2->D2_VALACRS := SD2->D2_VALACRS + (NoRound((_nAcresFin * SD2->D2_TOTAL),2))
-					SD2->D2_PRCVEN  := ROUND((1+_nAcresFin) * SD2->D2_PRCVEN, 4 )
-					IF _lGrupo
-						SD2->D2_PRCVEN := Round(SD2->D2_PRCVEN + _nValAcres,4)
+					
+					//-- Não calcula acrescimo para itens da campanha comprou ganhou --//
+					If !EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
+						RecLock('SD2',.F.)
+						SD2->D2_VALACRS := SD2->D2_VALACRS + (NoRound((_nAcresFin * SD2->D2_TOTAL),2))
+						SD2->D2_PRCVEN  := ROUND((1+_nAcresFin) * SD2->D2_PRCVEN, 4 )
+						IF _lGrupo
+							SD2->D2_PRCVEN := Round(SD2->D2_PRCVEN + _nValAcres,4)
+						EndIf
+						SD2->D2_TOTAL   := Round(SD2->D2_PRCVEN * SD2->D2_QUANT,4)
+						//SD2->D2_TOTAL   := ROUND(SD2->D2_TOTAL + ((_nAcresFin * SD2->D2_PRCVEN)* SD2->D2_QUANT),2)
+
+						_nSD2Total := SD2->D2_TOTAL - _nSD2Total
+						//SD2->D2_VALACRS := SD2->D2_VALACRS + _nSD2Total
+						//SD2->D2_BASEICM := NoRound(SD2->D2_BASEICM+((SD2->D2_VALFRE+_nSD2Total) * _nRedICm),2)
+						SD2->D2_BASEICM := Round((SD2->D2_TOTAL+SD2->D2_VALFRE) * _nRedICm,4)
+						SD2->D2_VALICM  := Round((SD2->D2_BASEICM * SD2->D2_PICM )/100,4)
+						SD2->D2_ICMFRET := Round(((SD2->D2_VALFRE * _nRedICm) * SD2->D2_PICM )/100,4)
+						_nValSE1 += _nSD2Total
+						nAliqIcm := If(Empty(SD2->D2_PICM), nAliqIcm,SD2->D2_PICM)
+
+						//nSD2BIcm  := SD2->D2_BASEICM - nSD2BIcm
+						//_nSD2VIcm  := SD2->D2_VALICM  - _nSD2VIcm
+
+						/*
+						IF _lGrupo
+						SD2->D2_TOTAL   := ROUND(SD2->D2_TOTAL +  (_nValAcres * SD2->D2_QUANT),2)
+						EndIf
+						*/
+						//SD2->D2_PRCVEN  := ROUND(SD2->D2_TOTAL / SD2->D2_QUANT,2)
+										
+						MsUnLOck()
 					EndIf
-					SD2->D2_TOTAL   := Round(SD2->D2_PRCVEN * SD2->D2_QUANT,4)
-					//SD2->D2_TOTAL   := ROUND(SD2->D2_TOTAL + ((_nAcresFin * SD2->D2_PRCVEN)* SD2->D2_QUANT),2)
-
-					_nSD2Total := SD2->D2_TOTAL - _nSD2Total
-					//SD2->D2_VALACRS := SD2->D2_VALACRS + _nSD2Total
-					//SD2->D2_BASEICM := NoRound(SD2->D2_BASEICM+((SD2->D2_VALFRE+_nSD2Total) * _nRedICm),2)
-					SD2->D2_BASEICM := Round((SD2->D2_TOTAL+SD2->D2_VALFRE) * _nRedICm,4)
-					SD2->D2_VALICM  := Round((SD2->D2_BASEICM * SD2->D2_PICM )/100,4)
-					SD2->D2_ICMFRET := Round(((SD2->D2_VALFRE * _nRedICm) * SD2->D2_PICM )/100,4)
-					_nValSE1 += _nSD2Total
-					nAliqIcm := If(Empty(SD2->D2_PICM), nAliqIcm,SD2->D2_PICM)
-
-					//nSD2BIcm  := SD2->D2_BASEICM - nSD2BIcm
-					//_nSD2VIcm  := SD2->D2_VALICM  - _nSD2VIcm
-
-					/*
-					IF _lGrupo
-					SD2->D2_TOTAL   := ROUND(SD2->D2_TOTAL +  (_nValAcres * SD2->D2_QUANT),2)
-					EndIf
-					*/
-					//SD2->D2_PRCVEN  := ROUND(SD2->D2_TOTAL / SD2->D2_QUANT,2)
-									
-					MsUnLOck()
 
 					// valter - função duplicada 22/08/2009
 					//	RecLock('SF2',.F.)
@@ -664,6 +668,12 @@ User Function Sf2460i
 		endif
 
 	endif
+
+	If CampExec() //-- Avalia se executa processos da campanha comprou ganhou --//
+		//-- Reprocessa livros fiscais para nota --//
+		U_MYMT930(DTOC(SF2->F2_EMISSAO), 2, SF2->F2_DOC, SF2->F2_SERIE, SF2->F2_CLIENTE, SF2->F2_LOJA)
+	EndIf
+
 	RestArea(aAreaLoc)
 Return
 
@@ -683,17 +693,8 @@ Static Function CampCalc()
 	Local nPercFrt := 0
 	Local nVlFrt := 0
 
-	//-- Verifica se o pedido contém itens da campanha --//
-	SD2->(dbSetOrder(3))
-	SD2->(dbGoTop())
-	If SD2->( dbSeek(cSD2Key) )
-		While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
-			If EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
-				lExecuta := .T. //-- Executa apenas se tiver itens da campanha --//
-			EndIf
-			SD2->(dbSkip())
-		EndDo
-	EndIf
+	//-- Avalia se executa processos da campanha comprou ganhou --//
+	lExecuta := CampExec()
 	
 	If lExecuta
 		//-- Verifica quantidade para calculo do frete --//
@@ -785,3 +786,28 @@ Static Function EItemCmp(cPedido, cItem, cProduto, cTES)
 	EndIf
 
 Return lRet
+
+/*/{Protheus.doc} CampExec
+Avalia se executa processos da campanha comprou ganhou
+@type Static Function
+@author Marcos Natã Santos
+@since 21/10/2019
+@version 1.0
+@return lExecuta, logic
+/*/
+Static Function CampExec()
+	Local lExecuta := .F.
+	Local cSD2Key := SF2->(F2_FILIAL+F2_DOC+F2_SERIE+F2_CLIENTE+F2_LOJA)
+
+	//-- Verifica se o pedido contém itens da campanha --//
+	SD2->(dbSetOrder(3))
+	SD2->(dbGoTop())
+	If SD2->( dbSeek(cSD2Key) )
+		While SD2->(!EOF()) .And. SD2->(D2_FILIAL+D2_DOC+D2_SERIE+D2_CLIENTE+D2_LOJA) == cSD2Key
+			If EItemCmp(SD2->D2_PEDIDO, SD2->D2_ITEMPV, SD2->D2_COD, SD2->D2_TES)
+				lExecuta := .T. //-- Executa apenas se tiver itens da campanha --//
+			EndIf
+			SD2->(dbSkip())
+		EndDo
+	EndIf
+Return lExecuta
