@@ -116,34 +116,36 @@ Static Function QtdGanha(cCodProd, nQtdVen)
     Local nQtdGanha := 0
     Local nQtdReal := 0
 
-    cQry := "SELECT ZA_COD, ZA_MULTIPL, ZA_QTDGAN " + CRLF
-    cQry += "FROM " + RetSqlName("SZA") + CRLF
-    cQry += "WHERE D_E_L_E_T_ <> '*' " + CRLF
-    cQry += "AND ZA_FILIAL = '"+ xFilial("SZA") +"' " + CRLF
-    cQry += "AND ZA_COD = '"+ AllTrim(cCodProd) +"' " + CRLF
-    cQry := ChangeQuery(cQry)
+    If nQtdVen > 0
+        cQry := "SELECT ZA_COD, ZA_MULTIPL, ZA_QTDGAN " + CRLF
+        cQry += "FROM " + RetSqlName("SZA") + CRLF
+        cQry += "WHERE D_E_L_E_T_ <> '*' " + CRLF
+        cQry += "AND ZA_FILIAL = '"+ xFilial("SZA") +"' " + CRLF
+        cQry += "AND ZA_COD = '"+ AllTrim(cCodProd) +"' " + CRLF
+        cQry := ChangeQuery(cQry)
 
-    If Select("CAMP") > 0
+        If Select("CAMP") > 0
+            CAMP->(DbCloseArea())
+        EndIf
+
+        TcQuery cQry New Alias "CAMP"
+
+        CAMP->(dbGoTop())
+        COUNT TO nQtdReg
+        CAMP->(dbGoTop())
+
+        If nQtdReg > 0
+            //---------------------------------------------------------//
+            //-- Analisa a quantidade que o cliente ganha no produto --//
+            //---------------------------------------------------------//
+            nMultiplo := CAMP->ZA_MULTIPL
+            nQtdGanha := CAMP->ZA_QTDGAN
+            nQtdReal := INT(nQtdVen / nMultiplo)
+            nQtdResult := IIF(nQtdReal > 0, nQtdReal * nQtdGanha, 0)
+        EndIf
+
         CAMP->(DbCloseArea())
     EndIf
-
-    TcQuery cQry New Alias "CAMP"
-
-    CAMP->(dbGoTop())
-    COUNT TO nQtdReg
-    CAMP->(dbGoTop())
-
-    If nQtdReg > 0
-        //---------------------------------------------------------//
-        //-- Analisa a quantidade que o cliente ganha no produto --//
-        //---------------------------------------------------------//
-        nMultiplo := CAMP->ZA_MULTIPL
-        nQtdGanha := CAMP->ZA_QTDGAN
-        nQtdReal := INT(nMultiplo / nQtdGanha)
-        nQtdResult := INT(nQtdVen / nQtdReal)
-    EndIf
-
-    CAMP->(DbCloseArea())
 
 Return nQtdResult
 
