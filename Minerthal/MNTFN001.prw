@@ -18,6 +18,7 @@ User Function MNTFN001()
     Local nQtdGanha := 0
     Local lExecFun := ExecFunc()
     Local lReclAlt := SuperGetMv("XX_RECLALT", .F., .F.)
+    Local cCFOPCmp := SuperGetMv("XX_CFOPCMP", .F., "5101/6101")
     Local cTES := ""
     Local cCF := ""
 
@@ -42,7 +43,9 @@ User Function MNTFN001()
             If INCLUI
                 //-- calcula campanha e adiciona bonificação --//
                 For nX := 1 To Len(aCols)
-                    If !aCols[nX][nDELET]
+                    //-- Valida linha não deletada e CFOP contido no parâmetro          --//
+                    //-- Campanha processa apenas para os CFOPs do parâmetro XX_CFOPCMP --//
+                    If !aCols[nX][nDELET] .And. (AllTrim(aCols[nX][nC6CF]) $ cCFOPCmp)
                         nQtdGanha := QtdGanha(aCols[nX][nC6PRODUTO], aCols[nX][nC6QTDVEN])
 
                         If nQtdGanha > 0
@@ -72,7 +75,9 @@ User Function MNTFN001()
 
                     //-- Recalcula campanha e adiciona bonificação --//
                     For nX := 1 To Len(aCols)
-                        If !aCols[nX][nDELET]
+                        //-- Valida linha não deletada e CFOP contido no parâmetro          --//
+                        //-- Campanha processa apenas para os CFOPs do parâmetro XX_CFOPCMP --//
+                        If !aCols[nX][nDELET] .And. (AllTrim(aCols[nX][nC6CF]) $ cCFOPCmp)
                             nQtdGanha := QtdGanha(aCols[nX][nC6PRODUTO], aCols[nX][nC6QTDVEN])
     
                             If nQtdGanha > 0
